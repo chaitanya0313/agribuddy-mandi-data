@@ -1,0 +1,26 @@
+name: fetch-mandi-prices
+on:
+  schedule:
+    - cron: '30 4 * * *'      # 10:00 AM IST daily
+  workflow_dispatch:           # lets you run it manually
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch from data.gov.in
+        env:
+          KEY: ${{ secrets.DATAGOV_API_KEY }}
+        run: |
+          mkdir -p data
+          curl -sS --fail --retry 3 --connect-timeout 20 \
+            "https://api.data.gov.in/resource/<9ef84268-d588-465a-a308-a864a43d0070>?api-key=${KEY}&format=json&limit=1000" \
+            -o data/mandi-prices.json
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/mandi-prices.json
+          git diff --staged --quiet || (git commit -m "update prices" && git push)
